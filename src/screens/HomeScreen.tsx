@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,51 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 
 import { ScreenProps } from "../navigation/typeNavigation";
 import { Species } from "../types/species";
 import { homeStyles } from "../theme/appStyles";
 import { useSpecies } from "../hooks/useSpecies";
+import { deleteSpecies } from "../services/speciesServices";
 
 type Props = ScreenProps<"Home">;
 
 export const HomeScreen = ({ navigation }: Props) => {
   const { species, loading, error } = useSpecies();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // ── Eliminar especie ──────────────────────────────────────────────────────
+  const handleDelete = (item: Species) => {
+    Alert.alert(
+      "Eliminar especie",
+      `¿Estás seguro de eliminar "${item.commonName}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeletingId(item.id);
+              await deleteSpecies(item.id);
+            } catch (e) {
+              Alert.alert("Error", "No se pudo eliminar la especie.");
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // ── Render de cada tarjeta ────────────────────────────────────────────────
-  const renderItem = ({item} : {item: Species}) => (
+  const renderItem = ({ item }: { item: Species }) => (
     <TouchableOpacity
       style={homeStyles.card}
-      onPress={() => navigation.navigate("Detail", { speciesId: "" })}
+      onPress={() => navigation.navigate("Detail", { speciesId: item.id })}
       activeOpacity={0.85}
     >
       {item.imageUrl ? (
@@ -40,20 +68,27 @@ export const HomeScreen = ({ navigation }: Props) => {
       </View>
 
       <View style={homeStyles.cardActions}>
+        {/* ── Lápiz: navega al Form con el id de la especie ── */}
         <TouchableOpacity
-          onPress={() => navigation.navigate("Form", {})}
+          onPress={() => navigation.navigate("Form", { speciesId: item.id })}
           style={homeStyles.editBtn}
         >
           <Text style={homeStyles.editBtnText}>✏️</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {}}>
-          <Text style={homeStyles.deleteBtnText}>🗑️</Text>
+
+        {/* ── Basurero: confirma y elimina ── */}
+        <TouchableOpacity
+          onPress={() => handleDelete(item)}
+          disabled={deletingId === item.id}
+        >
+          <Text style={homeStyles.deleteBtnText}>
+            {deletingId === item.id ? "⏳" : "🗑️"}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 
-  //Controlando el estado de la carag o error
   if (loading) {
     return (
       <View style={homeStyles.center}>
@@ -80,9 +115,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         contentContainerStyle={homeStyles.list}
         ListEmptyComponent={
           <View style={homeStyles.center}>
-            <Text style={homeStyles.emptyText}>
-              No hay especies registradas.
-            </Text>
+            <Text style={homeStyles.emptyText}>No hay especies registradas.</Text>
           </View>
         }
       />

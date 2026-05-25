@@ -7,7 +7,8 @@ import {
   ref,
   serverTimestamp,
   set,
-  update
+  update,
+  remove
 } from "firebase/database";
 import { Species, SpeciesFormValues } from "../types/species";
 import { db } from "./firebaseConfig";
@@ -73,3 +74,20 @@ export const getSpeciesById = async (id: string): Promise<Species | null> => {
   };
 };
 
+//Update - RealTime Database
+export const updateSpecies = async (
+  id: string,
+  values: Partial<SpeciesFormValues>,
+): Promise<void> => {
+  const speciesRef = ref(db, `${SPECIES_PATH}/${id}`);
+  await update(speciesRef, {
+    ...values,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+//Delete - RealTime Database
+export const deleteSpecies = async (id: string): Promise<void> => {
+  const speciesRef = ref(db, `${SPECIES_PATH}/${id}`);
+  await remove(speciesRef);
+};
